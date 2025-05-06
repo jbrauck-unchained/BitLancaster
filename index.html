@@ -17,7 +17,7 @@ title: Home
         <div class="Home-posts-post">
           <span class="Home-posts-post-date">{{ post.date | date_to_string }}</span>
           <span class="Home-posts-post-arrow">&raquo;</span>
-          <a class="Home-posts-post-title" href="{{ post.url }}">{{ post.title }}</a>
+          <a class="Home-posts-post-title" href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a>
         </div>
         {% assign counter = counter | plus: 1 %}
         {% if counter == event_posts %}
@@ -25,7 +25,7 @@ title: Home
         {% endif %}
       {% endif %}
     {% endfor %}
-    <p><a href="/events.html">See all events</a></p>
+    <p><a href="{{ site.baseurl }}/events.html">See all events</a></p>
   </div>
   <div class="Home-posts">
     <h2 class="Home-posts-title">Recent Blog Posts</h2>
@@ -36,7 +36,7 @@ title: Home
         <div class="Home-posts-post">
           <span class="Home-posts-post-date">{{ post.date | date_to_string }}</span>
           &raquo;
-          <a class="Home-posts-post-title" href="{{ post.url }}">{{ post.title }}</a>
+          <a class="Home-posts-post-title" href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a>
         </div>
         {% assign counter = counter | plus: 1 %}
         {% if counter == blog_posts %}
@@ -44,6 +44,6 @@ title: Home
         {% endif %}
       {% endif %}
     {% endfor %}
-    <p><a href="/blog.html">See all blog posts</a></p>
+    <p><a href="{{ site.baseurl }}/blog.html">See all blog posts</a></p>
   </div>
 </div>
