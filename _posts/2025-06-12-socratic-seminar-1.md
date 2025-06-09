@@ -1,7 +1,7 @@
 ---
 layout: post
 type: socratic
-title: "Socratic Seminar 1"
+title: "Socratic Seminar 2"
 meetup: "https://www.meetup.com/lancaster-bitcoin-meetup/"
 ---
 
