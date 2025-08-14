@@ -17,7 +17,7 @@ Please note the start time! We will open doors at 7pm for socializing, and plan 
 
 ## In the news
 - [Bitcoin Hits New All Time High at $112,000 As Corporations Buy Record Amounts of BTC](https://www.meetup.com/lancaster-bitcoin-meetup/https:/x.com/dergoegge/status/1936093236226871794/)
-    - 
+    - [Bitcoin treasuries](https://bitcointreasuries.net/)
 - [Bitchat: Decentralized Bluetooth Works Without Internet Download](https://bit-chats.com/)
 - [Unchained Surpasses $1 Billion in Bitcoin-Backed Loan Originations](https://bitcoinmagazine.com/news/unchained-surpasses-1-billion-in-bitcoin-backed-loan-originations)
 - [SaveOurWallets.org:  Support Section 110 of the CLARITY Act](https://saveourwallets.org/)
