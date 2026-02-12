@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Keys, Your Coins — Bitcoin Self-Custody</title>
+
+    <!-- Fonts: Space Grotesk (display) + DM Sans (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===========================================
+           CSS CUSTOM PROPERTIES (THEME)
+           Bitcoin-inspired dark theme with orange accent
+           =========================================== */
+        :root {
+            /* Colors */
+            --bg-primary: #0f1114;
+            --bg-secondary: #181b20;
+            --bg-card: #1c1f26;
+            --text-primary: #f0f0f0;
+            --text-secondary: #8a8f9a;
+            --accent: #f7931a;
+            --accent-glow: rgba(247, 147, 26, 0.25);
+            --accent-dim: rgba(247, 147, 26, 0.08);
+            --danger: #ef4444;
+            --success: #22c55e;
+            --subtle-border: rgba(255, 255, 255, 0.06);
+
+            /* Typography */
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            /* Spacing */
+            --slide-padding: clamp(2rem, 6vw, 5rem);
+
+            /* Animation */
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+            --duration-normal: 0.7s;
+            --duration-fast: 0.4s;
+        }
+
+        /* ===========================================
+           BASE STYLES
+           =========================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-snap-type: y mandatory;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ===========================================
+           PROGRESS BAR
+           Thin orange bar at top showing scroll progress
+           =========================================== */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--accent);
+            z-index: 1000;
+            transition: width 0.3s var(--ease-out-quart);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* ===========================================
+           NAVIGATION DOTS
+           Right-side dots for slide navigation
+           =========================================== */
+        .nav-dots {
+            position: fixed;
+            right: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .nav-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s var(--ease-out-expo);
+            padding: 0;
+        }
+
+        .nav-dot:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.3);
+        }
+
+        .nav-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+            transform: scale(1.2);
+        }
+
+        /* ===========================================
+           KEYBOARD HINT
+           Bottom-right hint showing navigation keys
+           =========================================== */
+        .keyboard-hint {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 100;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            opacity: 0.4;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+
+        .keyboard-hint span {
+            display: inline-block;
+            padding: 2px 6px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 3px;
+            margin: 0 2px;
+        }
+
+        /* ===========================================
+           SLIDE COUNTER
+           Bottom-left current/total indicator
+           =========================================== */
+        .slide-counter {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            z-index: 100;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .slide-counter .current {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* ===========================================
+           SLIDE CONTAINER
+           Each section is one full-viewport slide
+           =========================================== */
+        .slide {
+            min-height: 100vh;
+            padding: var(--slide-padding);
+            padding-right: calc(var(--slide-padding) + 2rem);
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-inner {
+            max-width: 960px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* ===========================================
+           TYPOGRAPHY
+           =========================================== */
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+
+        h2 {
+            font-family: var(--font-display);
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -0.01em;
+            margin-bottom: 1.5rem;
+        }
+
+        h3 {
+            font-family: var(--font-display);
+            font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+            font-weight: 600;
+            line-height: 1.3;
+            color: var(--text-secondary);
+        }
+
+        p {
+            font-size: clamp(1rem, 1.8vw, 1.25rem);
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .accent {
+            color: var(--accent);
+        }
+
+        .mono {
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+        }
+
+        /* ===========================================
+           SLIDE TYPE: TITLE
+           Large centered opening slide
+           =========================================== */
+        .title-slide {
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .title-slide h1 {
+            margin-bottom: 1rem;
+        }
+
+        .title-slide .subtitle {
+            font-size: clamp(1rem, 2vw, 1.4rem);
+            color: var(--text-secondary);
+            font-weight: 400;
+            max-width: 600px;
+        }
+
+        .title-slide .bitcoin-icon {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            display: inline-block;
+        }
+
+        .title-slide .event-tag {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.4rem 1.2rem;
+            border: 1px solid var(--subtle-border);
+            border-radius: 100px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===========================================
+           SLIDE TYPE: STATEMENT
+           Big headline with no bullets
+           =========================================== */
+        .statement-slide h2 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            max-width: 800px;
+        }
+
+        .statement-slide .context {
+            margin-top: 1.5rem;
+            font-size: 1.1rem;
+            max-width: 550px;
+        }
+
+        /* ===========================================
+           CONTENT LISTS
+           Styled bullet points
+           =========================================== */
+        .content-list {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .content-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            font-size: clamp(1rem, 1.6vw, 1.15rem);
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        .content-list li::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            min-width: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-top: 0.55em;
+        }
+
+        .content-list li strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* ===========================================
+           CARD GRID
+           For side-by-side info blocks
+           =========================================== */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--subtle-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: border-color 0.3s;
+        }
+
+        .card:hover {
+            border-color: rgba(247, 147, 26, 0.2);
+        }
+
+        .card .card-icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .card p {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* ===========================================
+           CALLOUT BOX
+           Highlighted info box for important notes
+           =========================================== */
+        .callout {
+            background: var(--accent-dim);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 1.25rem 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .callout p {
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .callout.danger {
+            background: rgba(239, 68, 68, 0.08);
+            border-left-color: var(--danger);
+        }
+
+        .callout.danger p {
+            color: #fca5a5;
+        }
+
+        /* ===========================================
+           DO / DON'T COLUMNS
+           Two-column comparison layout
+           =========================================== */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .col-do, .col-dont {
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+
+        .col-do {
+            background: rgba(34, 197, 94, 0.06);
+            border: 1px solid rgba(34, 197, 94, 0.15);
+        }
+
+        .col-dont {
+            background: rgba(239, 68, 68, 0.06);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        .col-do h3, .col-dont h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            font-family: var(--font-mono);
+        }
+
+        .col-do h3 { color: var(--success); }
+        .col-dont h3 { color: var(--danger); }
+
+        .col-do li::before { background: var(--success); }
+        .col-dont li::before { background: var(--danger); }
+
+        /* ===========================================
+           SEED PHRASE VISUAL
+           Grid display of example seed words
+           =========================================== */
+        .seed-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+            max-width: 520px;
+        }
+
+        .seed-word {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--subtle-border);
+            border-radius: 6px;
+            text-align: center;
+            color: var(--text-primary);
+        }
+
+        .seed-word .word-num {
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            margin-right: 0.25rem;
+        }
+
+        .seed-word.highlight {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        /* ===========================================
+           TRIVIA SECTION
+           Interactive reveal for the final question
+           =========================================== */
+        .trivia-slide {
+            text-align: center;
+            align-items: center;
+        }
+
+        .trivia-question {
+            font-family: var(--font-display);
+            font-size: clamp(1.3rem, 3vw, 1.8rem);
+            font-weight: 600;
+            line-height: 1.4;
+            max-width: 700px;
+            margin: 0 auto 2rem;
+        }
+
+        .trivia-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-width: 550px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .trivia-option {
+            background: var(--bg-card);
+            border: 1px solid var(--subtle-border);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s var(--ease-out-expo);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .trivia-option:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: var(--bg-secondary);
+        }
+
+        .trivia-option .option-letter {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 0.9rem;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 1px solid var(--accent);
+            flex-shrink: 0;
+        }
+
+        .trivia-option.correct {
+            border-color: var(--success);
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .trivia-option.correct .option-letter {
+            background: var(--success);
+            border-color: var(--success);
+            color: #000;
+        }
+
+        .trivia-option.incorrect {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.06);
+            opacity: 0.5;
+        }
+
+        .trivia-answer {
+            display: none;
+            margin-top: 2rem;
+            max-width: 550px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .trivia-answer.show {
+            display: block;
+        }
+
+        .trivia-answer p {
+            text-align: left;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ===========================================
+           ANIMATIONS
+           Scroll-triggered via Intersection Observer
+           =========================================== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(25px);
+            transition: opacity var(--duration-normal) var(--ease-out-expo),
+                        transform var(--duration-normal) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Stagger children for sequential reveals */
+        .slide.visible .reveal:nth-child(1) { transition-delay: 0.05s; }
+        .slide.visible .reveal:nth-child(2) { transition-delay: 0.15s; }
+        .slide.visible .reveal:nth-child(3) { transition-delay: 0.25s; }
+        .slide.visible .reveal:nth-child(4) { transition-delay: 0.35s; }
+        .slide.visible .reveal:nth-child(5) { transition-delay: 0.45s; }
+        .slide.visible .reveal:nth-child(6) { transition-delay: 0.55s; }
+
+        /* Card-specific stagger */
+        .slide.visible .card-grid .card:nth-child(1) { transition-delay: 0.2s; }
+        .slide.visible .card-grid .card:nth-child(2) { transition-delay: 0.3s; }
+        .slide.visible .card-grid .card:nth-child(3) { transition-delay: 0.4s; }
+
+        /* Seed word stagger */
+        .slide.visible .seed-word {
+            transition: opacity 0.4s var(--ease-out-expo), transform 0.4s var(--ease-out-expo);
+        }
+
+        .seed-word {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .slide.visible .seed-word { opacity: 1; transform: translateY(0); }
+        .slide.visible .seed-word:nth-child(1)  { transition-delay: 0.10s; }
+        .slide.visible .seed-word:nth-child(2)  { transition-delay: 0.14s; }
+        .slide.visible .seed-word:nth-child(3)  { transition-delay: 0.18s; }
+        .slide.visible .seed-word:nth-child(4)  { transition-delay: 0.22s; }
+        .slide.visible .seed-word:nth-child(5)  { transition-delay: 0.26s; }
+        .slide.visible .seed-word:nth-child(6)  { transition-delay: 0.30s; }
+        .slide.visible .seed-word:nth-child(7)  { transition-delay: 0.34s; }
+        .slide.visible .seed-word:nth-child(8)  { transition-delay: 0.38s; }
+        .slide.visible .seed-word:nth-child(9)  { transition-delay: 0.42s; }
+        .slide.visible .seed-word:nth-child(10) { transition-delay: 0.46s; }
+        .slide.visible .seed-word:nth-child(11) { transition-delay: 0.50s; }
+        .slide.visible .seed-word:nth-child(12) { transition-delay: 0.54s; }
+        .slide.visible .seed-word:nth-child(13) { transition-delay: 0.70s; }
+
+        /* Subtle background glow per slide */
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -15%;
+            width: 50%;
+            height: 70%;
+            background: radial-gradient(ellipse, var(--accent-glow), transparent 70%);
+            opacity: 0;
+            transition: opacity 1.5s;
+            pointer-events: none;
+        }
+
+        .slide.visible::before {
+            opacity: 0.25;
+        }
+
+        /* ===========================================
+           REDUCED MOTION
+           Respect user accessibility preferences
+           =========================================== */
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            .reveal {
+                transition: opacity 0.3s ease;
+                transform: none !important;
+            }
+            .seed-word {
+                transition: opacity 0.2s ease;
+                transform: none !important;
+            }
+            .slide::before { transition: none; }
+        }
+
+        /* ===========================================
+           RESPONSIVE
+           Mobile-friendly adjustments
+           =========================================== */
+        @media (max-width: 768px) {
+            .nav-dots, .keyboard-hint { display: none; }
+            .slide { padding: 2rem 1.5rem; padding-right: 1.5rem; }
+            .two-col { grid-template-columns: 1fr; gap: 1rem; }
+            .seed-grid { grid-template-columns: repeat(3, 1fr); }
+            .card-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .seed-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Progress bar -->
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- Navigation dots (generated by JS) -->
+    <nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+    <!-- Keyboard hint -->
+    <div class="keyboard-hint"><span>&larr;</span> <span>&rarr;</span> or <span>Space</span></div>
+
+    <!-- Slide counter -->
+    <div class="slide-counter"><span class="current" id="currentSlide">1</span> / <span id="totalSlides">11</span></div>
+
+
+    <!-- ============================================
+         SLIDE 1: TITLE
+         ============================================ -->
+    <section class="slide title-slide" data-slide="0">
+        <div class="slide-inner">
+            <div class="bitcoin-icon reveal">&#8383;</div>
+            <h1 class="reveal">Your Keys,<br>Your <span class="accent">Coins</span></h1>
+            <p class="subtitle reveal">A practical guide to Bitcoin self-custody, hardware wallets, and keeping your stack safe</p>
+            <span class="event-tag reveal">BitLancaster</span>
+        </div>
+    </section>
+    <!-- Speaker Notes: Welcome everyone. Today we're covering one of the most 
+         important topics in Bitcoin: taking actual ownership of your coins through 
+         self-custody. We'll cover the basics, best practices, and one slightly 
+         tricky detail that even experienced Bitcoiners sometimes get wrong. -->
+
+
+    <!-- ============================================
+         SLIDE 2: WHY SELF-CUSTODY
+         ============================================ -->
+    <section class="slide statement-slide" data-slide="1">
+        <div class="slide-inner">
+            <h2 class="reveal">"Not your keys,<br>not your <span class="accent">coins</span>."</h2>
+            <p class="context reveal">When your bitcoin sits on an exchange, you hold an IOU. The exchange holds the keys. If they go down, your bitcoin goes with them.</p>
+            <div class="callout danger reveal">
+                <p><strong>Mt. Gox.</strong> 850,000 BTC lost. <strong>FTX.</strong> Billions gone. <strong>Celsius.</strong> Frozen withdrawals. The pattern is clear.</p>
+            </div>
+        </div>
+    </section>
+    <!-- Speaker Notes: This phrase is the bedrock of Bitcoin self-sovereignty. 
+         Every major exchange collapse — Mt. Gox in 2014, FTX in 2022, Celsius, 
+         BlockFi — proved the same lesson. If you don't control the private keys, 
+         you are trusting someone else with your money. Self-custody eliminates 
+         that counterparty risk entirely. -->
+
+
+    <!-- ============================================
+         SLIDE 3: WHAT IS A PRIVATE KEY
+         ============================================ -->
+    <section class="slide" data-slide="2">
+        <div class="slide-inner">
+            <h2 class="reveal">What are you actually <span class="accent">protecting</span>?</h2>
+            <ul class="content-list">
+                <li class="reveal"><strong>A private key</strong> — a 256-bit number that proves ownership of your bitcoin</li>
+                <li class="reveal"><strong>Whoever has the key</strong> can spend the coins. No customer support. No reversals.</li>
+                <li class="reveal"><strong>Self-custody</strong> means you — and only you — control that key</li>
+            </ul>
+            <div class="callout reveal">
+                <p>Think of it like a combination to a vault. Anyone with the combination can open it. There's no locksmith to call.</p>
+            </div>
+        </div>
+    </section>
+    <!-- Speaker Notes: At a fundamental level, Bitcoin ownership IS key ownership. 
+         A private key is just a very large number. There are no accounts, no 
+         usernames. The person who has the key can move the coins. That's it. 
+         Self-custody means taking responsibility for that key. -->
+
+
+    <!-- ============================================
+         SLIDE 4: WHAT IS A HARDWARE WALLET
+         ============================================ -->
+    <section class="slide" data-slide="3">
+        <div class="slide-inner">
+            <h2 class="reveal">Hardware wallets:<br>your <span class="accent">offline vault</span></h2>
+            <div class="card-grid">
+                <div class="card reveal">
+                    <div class="card-icon">🔐</div>
+                    <h3>Keys never touch the internet</h3>
+                    <p>Your private key is generated and stored on a dedicated chip. It never leaves the device.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">✍️</div>
+                    <h3>Sign transactions offline</h3>
+                    <p>The device signs transactions internally. Only the signed result goes to your computer.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🛡️</div>
+                    <h3>Malware can't reach your keys</h3>
+                    <p>Even if your computer is compromised, the hardware wallet keeps your keys isolated.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Speaker Notes: A hardware wallet is a small dedicated device whose only 
+         job is to keep your private keys offline and sign transactions securely. 
+         The key insight: your computer or phone never sees the private key. 
+         Transactions are constructed on your computer, sent to the device for 
+         signing, and then broadcast. The key never crosses the air gap. 
+         Popular options include Coldcard, Trezor, Ledger, and Foundation Passport. -->
+
+
+    <!-- ============================================
+         SLIDE 5: THE SEED PHRASE
+         ============================================ -->
+    <section class="slide" data-slide="4">
+        <div class="slide-inner">
+            <h2 class="reveal">Your seed phrase:<br>the <span class="accent">master backup</span></h2>
+            <p class="reveal" style="margin-bottom: 0.5rem;">12 or 24 words that can regenerate all your keys. Lose it and your bitcoin is gone forever.</p>
+            <div class="seed-grid reveal">
+                <div class="seed-word"><span class="word-num">1.</span> abandon</div>
+                <div class="seed-word"><span class="word-num">2.</span> ability</div>
+                <div class="seed-word"><span class="word-num">3.</span> hockey</div>
+                <div class="seed-word"><span class="word-num">4.</span> ritual</div>
+                <div class="seed-word"><span class="word-num">5.</span> dawn</div>
+                <div class="seed-word"><span class="word-num">6.</span> fabric</div>
+                <div class="seed-word"><span class="word-num">7.</span> symbol</div>
+                <div class="seed-word"><span class="word-num">8.</span> vault</div>
+                <div class="seed-word"><span class="word-num">9.</span> glare</div>
+                <div class="seed-word"><span class="word-num">10.</span> mesh</div>
+                <div class="seed-word"><span class="word-num">11.</span> opera</div>
+                <div class="seed-word"><span class="word-num">12.</span> walnut</div>
+                <div class="seed-word highlight"><span class="word-num">+</span> passphrase?</div>
+            </div>
+            <p class="reveal" style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">Example only — <strong style="color: var(--accent);">never share your real seed phrase with anyone</strong></p>
+        </div>
+    </section>
+    <!-- Speaker Notes: When you set up a hardware wallet, it gives you a seed 
+         phrase — usually 12 or 24 words from a standard list called BIP-39. These 
+         words encode all the information needed to recreate every key and address 
+         your wallet will ever use. This is your ultimate backup. If your hardware 
+         wallet breaks, you can restore from these words on a new device. But if 
+         someone else gets these words, they can steal everything. Notice that 
+         13th slot — we'll come back to that. -->
+
+
+    <!-- ============================================
+         SLIDE 6: PROTECTING YOUR SEED
+         ============================================ -->
+    <section class="slide" data-slide="5">
+        <div class="slide-inner">
+            <h2 class="reveal">Protecting your <span class="accent">seed phrase</span></h2>
+            <div class="two-col">
+                <div class="col-do reveal">
+                    <h3>Do</h3>
+                    <ul class="content-list">
+                        <li>Write it on paper or stamp into metal</li>
+                        <li>Store in a fireproof, waterproof location</li>
+                        <li>Consider splitting across locations</li>
+                        <li>Test your backup by recovering on a spare device</li>
+                    </ul>
+                </div>
+                <div class="col-dont reveal">
+                    <h3>Don't</h3>
+                    <ul class="content-list">
+                        <li>Take a photo or screenshot</li>
+                        <li>Store in a notes app or cloud drive</li>
+                        <li>Email or text it to yourself</li>
+                        <li>Leave it in plain sight at home</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Speaker Notes: Your seed phrase is the single biggest target. Physical 
+         storage is key. Paper works; steel or titanium plates are even better 
+         because they survive fire and flood. Some people split their seed using 
+         Shamir's Secret Sharing or just geographic distribution. And critically: 
+         TEST YOUR BACKUP. Do a full recovery on a different device to make sure 
+         your backup actually works before you load serious value onto it. -->
+
+
+    <!-- ============================================
+         SLIDE 7: BEST PRACTICES
+         ============================================ -->
+    <section class="slide" data-slide="6">
+        <div class="slide-inner">
+            <h2 class="reveal">Best practices <span class="accent">checklist</span></h2>
+            <ul class="content-list">
+                <li class="reveal"><strong>Buy hardware wallets directly from the manufacturer</strong> — never secondhand or from marketplace sellers</li>
+                <li class="reveal"><strong>Verify firmware and software</strong> — always update from official sources</li>
+                <li class="reveal"><strong>Use a dedicated device</strong> — don't install wallet software on a shared or compromised computer</li>
+                <li class="reveal"><strong>Practice with small amounts first</strong> — send a small test transaction before loading real value</li>
+                <li class="reveal"><strong>Plan for inheritance</strong> — trusted family members need instructions (not just the seed)</li>
+            </ul>
+        </div>
+    </section>
+    <!-- Speaker Notes: A few practical rules. Only buy hardware wallets from the 
+         manufacturer's website — supply chain attacks are real. Always verify 
+         firmware. Use a clean computer. Start small and test everything. And think 
+         about what happens if you're hit by a bus. Your family needs a clear 
+         path to recovery, which means documented instructions in addition to 
+         the seed phrase itself. -->
+
+
+    <!-- ============================================
+         SLIDE 8: THE PASSPHRASE (TOUGH DETAIL)
+         This is the "quiet tougher detail" nestled in
+         ============================================ -->
+    <section class="slide" data-slide="7">
+        <div class="slide-inner">
+            <h2 class="reveal">The "25th word":<br><span class="accent">BIP-39 passphrases</span></h2>
+            <ul class="content-list">
+                <li class="reveal"><strong>An optional passphrase</strong> added on top of your 12/24-word seed</li>
+                <li class="reveal"><strong>Creates an entirely different wallet</strong> — different keys, different addresses, different funds</li>
+                <li class="reveal"><strong>Same seed + different passphrase = completely separate wallet</strong> with no visible link</li>
+            </ul>
+            <div class="callout reveal">
+                <p><strong>Plausible deniability:</strong> You can keep a decoy balance on the passphrase-free wallet and your real stack behind the passphrase. Under duress, reveal only the base seed.</p>
+            </div>
+            <div class="callout danger reveal">
+                <p><strong>The risk:</strong> If you forget or lose the passphrase, those funds are gone. There is no recovery. The seed alone won't find them.</p>
+            </div>
+        </div>
+    </section>
+    <!-- Speaker Notes: Here's one that trips people up. BIP-39 lets you add an 
+         extra passphrase on top of your seed words. This passphrase fundamentally 
+         changes which keys are generated. Same 24 words with passphrase "alpha" 
+         produces a completely different wallet than passphrase "beta" — or no 
+         passphrase at all. This is powerful for plausible deniability, but it's 
+         a double-edged sword. Forget the passphrase and those coins are 
+         cryptographically unreachable. There's no "forgot password" link. 
+         The passphrase IS part of the key material. -->
+
+
+    <!-- ============================================
+         SLIDE 9: COMMON MISTAKES
+         ============================================ -->
+    <section class="slide" data-slide="8">
+        <div class="slide-inner">
+            <h2 class="reveal">Mistakes that <span class="accent">cost people bitcoin</span></h2>
+            <div class="card-grid">
+                <div class="card reveal">
+                    <div class="card-icon" style="color: var(--danger);">📸</div>
+                    <h3>Photographing the seed</h3>
+                    <p>Your phone syncs to cloud. Cloud gets breached. Seed is compromised.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon" style="color: var(--danger);">📍</div>
+                    <h3>Single point of failure</h3>
+                    <p>One backup in one location. House fire, flood, or theft = total loss.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon" style="color: var(--danger);">🙈</div>
+                    <h3>Never testing recovery</h3>
+                    <p>Wrote the seed wrong? Only one way to find out — and it shouldn't be during an emergency.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Speaker Notes: These are the most common ways people lose bitcoin in 
+         self-custody. Taking a photo seems convenient but your camera roll 
+         syncs everywhere. Having one backup in one place is fragile. And the 
+         number of people who've written down their seed incorrectly and only 
+         found out too late is heartbreaking. Test. Your. Backup. -->
+
+
+    <!-- ============================================
+         SLIDE 10: SUMMARY
+         ============================================ -->
+    <section class="slide" data-slide="9">
+        <div class="slide-inner">
+            <h2 class="reveal">Remember <span class="accent">these</span></h2>
+            <ul class="content-list">
+                <li class="reveal"><strong>Self-custody eliminates counterparty risk</strong> — your keys, your rules</li>
+                <li class="reveal"><strong>Hardware wallets keep keys offline</strong> — away from malware and hackers</li>
+                <li class="reveal"><strong>Your seed phrase is everything</strong> — protect it physically, test your backup</li>
+                <li class="reveal"><strong>Passphrases are powerful but dangerous</strong> — forget it and funds are lost</li>
+                <li class="reveal"><strong>Start small, build confidence</strong> — then scale up</li>
+            </ul>
+        </div>
+    </section>
+    <!-- Speaker Notes: Quick recap of what we covered. Self-custody removes 
+         the risk of exchange failure. Hardware wallets protect your keys. 
+         Seed phrases need physical, redundant, tested backups. Passphrases 
+         add security but also add risk. And always start with small amounts 
+         until you're confident in your setup. Now — let's see if you were 
+         paying attention... -->
+
+
+    <!-- ============================================
+         SLIDE 11: TRIVIA
+         ============================================ -->
+    <section class="slide trivia-slide" data-slide="10">
+        <div class="slide-inner" style="text-align: center;">
+            <h2 class="reveal" style="margin-bottom: 0.5rem;">Trivia <span class="accent">time</span></h2>
+            <p class="trivia-question reveal">What happens when you add a BIP-39 passphrase to your existing 12- or 24-word seed phrase?</p>
+
+            <div class="trivia-options reveal" id="triviaOptions">
+                <div class="trivia-option" data-answer="wrong" onclick="checkAnswer(this)">
+                    <span class="option-letter">A</span>
+                    <span>It encrypts your existing wallet with a password</span>
+                </div>
+                <div class="trivia-option" data-answer="correct" onclick="checkAnswer(this)">
+                    <span class="option-letter">B</span>
+                    <span>It generates an entirely different wallet with new keys and addresses</span>
+                </div>
+                <div class="trivia-option" data-answer="wrong" onclick="checkAnswer(this)">
+                    <span class="option-letter">C</span>
+                    <span>It adds two-factor authentication to your hardware wallet</span>
+                </div>
+                <div class="trivia-option" data-answer="wrong" onclick="checkAnswer(this)">
+                    <span class="option-letter">D</span>
+                    <span>It creates a backup copy of your wallet on the blockchain</span>
+                </div>
+            </div>
+
+            <div class="trivia-answer" id="triviaAnswer">
+                <div class="callout">
+                    <p><strong>Correct answer: B.</strong> A BIP-39 passphrase doesn't "protect" your existing wallet — it mathematically derives a completely new one. Same seed words + different passphrase = different keys, different addresses, different coins. That's why forgetting it means permanent loss.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Speaker Notes: Let's test what you learned! Give the audience a moment 
+         to think. The answer is B. The passphrase doesn't encrypt or protect the 
+         original wallet — it creates a mathematically distinct wallet. This is 
+         a common misconception. Many people think it's like a password on a file, 
+         but it's actually part of the key derivation itself. Different passphrase, 
+         completely different wallet. -->
+
+
+    <script>
+        /* ===========================================
+           SLIDE PRESENTATION CONTROLLER
+           Handles navigation, scroll, keyboard, touch,
+           progress bar, nav dots, and slide counter.
+           =========================================== */
+        class SlidePresentation {
+            constructor() {
+                this.slides = document.querySelectorAll('.slide');
+                this.totalSlides = this.slides.length;
+                this.currentIndex = 0;
+                this.isScrolling = false;
+                this.scrollTimeout = null;
+
+                this.init();
+            }
+
+            init() {
+                this.createNavDots();
+                this.setupIntersectionObserver();
+                this.setupKeyboardNav();
+                this.setupWheelNav();
+                this.setupTouchNav();
+                this.updateSlideCounter();
+                this.updateProgress();
+
+                // Mark first slide visible on load
+                this.slides[0].classList.add('visible');
+
+                // Update total count in DOM
+                document.getElementById('totalSlides').textContent = this.totalSlides;
+            }
+
+            /* -------------------------------------------
+               NAV DOTS
+               Generate one dot per slide
+               ------------------------------------------- */
+            createNavDots() {
+                const nav = document.getElementById('navDots');
+                this.slides.forEach((_, i) => {
+                    const dot = document.createElement('button');
+                    dot.classList.add('nav-dot');
+                    if (i === 0) dot.classList.add('active');
+                    dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+                    dot.addEventListener('click', () => this.goToSlide(i));
+                    nav.appendChild(dot);
+                });
+                this.dots = nav.querySelectorAll('.nav-dot');
+            }
+
+            /* -------------------------------------------
+               INTERSECTION OBSERVER
+               Triggers .visible class for animations
+               ------------------------------------------- */
+            setupIntersectionObserver() {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                            const idx = parseInt(entry.target.dataset.slide);
+                            this.currentIndex = idx;
+                            this.updateNavDots();
+                            this.updateSlideCounter();
+                            this.updateProgress();
+                        }
+                    });
+                }, {
+                    threshold: 0.5
+                });
+
+                this.slides.forEach(slide => observer.observe(slide));
+            }
+
+            /* -------------------------------------------
+               KEYBOARD NAVIGATION
+               Arrow keys, space, page up/down
+               ------------------------------------------- */
+            setupKeyboardNav() {
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case 'ArrowDown':
+                        case 'ArrowRight':
+                        case ' ':
+                        case 'PageDown':
+                            e.preventDefault();
+                            this.nextSlide();
+                            break;
+                        case 'ArrowUp':
+                        case 'ArrowLeft':
+                        case 'PageUp':
+                            e.preventDefault();
+                            this.prevSlide();
+                            break;
+                        case 'Home':
+                            e.preventDefault();
+                            this.goToSlide(0);
+                            break;
+                        case 'End':
+                            e.preventDefault();
+                            this.goToSlide(this.totalSlides - 1);
+                            break;
+                    }
+                });
+            }
+
+            /* -------------------------------------------
+               WHEEL NAVIGATION
+               Scroll wheel with debounce to prevent
+               skipping multiple slides
+               ------------------------------------------- */
+            setupWheelNav() {
+                document.addEventListener('wheel', (e) => {
+                    if (this.isScrolling) return;
+                    this.isScrolling = true;
+
+                    if (e.deltaY > 0) {
+                        this.nextSlide();
+                    } else if (e.deltaY < 0) {
+                        this.prevSlide();
+                    }
+
+                    clearTimeout(this.scrollTimeout);
+                    this.scrollTimeout = setTimeout(() => {
+                        this.isScrolling = false;
+                    }, 800);
+                }, { passive: true });
+            }
+
+            /* -------------------------------------------
+               TOUCH NAVIGATION
+               Swipe up/down on mobile
+               ------------------------------------------- */
+            setupTouchNav() {
+                let touchStartY = 0;
+                let touchStartX = 0;
+
+                document.addEventListener('touchstart', (e) => {
+                    touchStartY = e.touches[0].clientY;
+                    touchStartX = e.touches[0].clientX;
+                }, { passive: true });
+
+                document.addEventListener('touchend', (e) => {
+                    const deltaY = touchStartY - e.changedTouches[0].clientY;
+                    const deltaX = touchStartX - e.changedTouches[0].clientX;
+
+                    // Only respond to vertical swipes
+                    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 50) {
+                        if (deltaY > 0) {
+                            this.nextSlide();
+                        } else {
+                            this.prevSlide();
+                        }
+                    }
+                }, { passive: true });
+            }
+
+            /* -------------------------------------------
+               NAVIGATION METHODS
+               ------------------------------------------- */
+            nextSlide() {
+                if (this.currentIndex < this.totalSlides - 1) {
+                    this.goToSlide(this.currentIndex + 1);
+                }
+            }
+
+            prevSlide() {
+                if (this.currentIndex > 0) {
+                    this.goToSlide(this.currentIndex - 1);
+                }
+            }
+
+            goToSlide(index) {
+                this.slides[index].scrollIntoView({ behavior: 'smooth' });
+                this.currentIndex = index;
+                this.updateNavDots();
+                this.updateSlideCounter();
+                this.updateProgress();
+            }
+
+            /* -------------------------------------------
+               UI UPDATES
+               ------------------------------------------- */
+            updateNavDots() {
+                this.dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === this.currentIndex);
+                });
+            }
+
+            updateSlideCounter() {
+                document.getElementById('currentSlide').textContent = this.currentIndex + 1;
+            }
+
+            updateProgress() {
+                const progress = ((this.currentIndex) / (this.totalSlides - 1)) * 100;
+                document.getElementById('progressBar').style.width = progress + '%';
+            }
+        }
+
+        /* ===========================================
+           TRIVIA INTERACTION
+           Handles answer selection and reveal
+           =========================================== */
+        function checkAnswer(element) {
+            const options = document.querySelectorAll('.trivia-option');
+            const answer = document.getElementById('triviaAnswer');
+
+            // Prevent multiple clicks
+            if (element.classList.contains('correct') || element.classList.contains('incorrect')) return;
+
+            options.forEach(opt => {
+                if (opt.dataset.answer === 'correct') {
+                    opt.classList.add('correct');
+                } else {
+                    opt.classList.add('incorrect');
+                }
+                opt.style.pointerEvents = 'none';
+            });
+
+            // Show answer explanation
+            answer.classList.add('show');
+        }
+
+        /* ===========================================
+           INITIALIZE
+           =========================================== */
+        document.addEventListener('DOMContentLoaded', () => {
+            new SlidePresentation();
+        });
+    </script>
+
+</body>
+</html>
